@@ -1,0 +1,21 @@
+node_modules
+.next
+dist
+.git
+.wrangler
+.env*
+.dev.vars
+.dev.vars.*
+data
+*.sqlite
+*.sqlite-*
+
+# Cloudflare Workers / OpenAI Sites leftovers — not used by the Node build.
+vite.config.ts
+cloudflare-env.d.ts
+app/chatgpt-auth.ts
+build
+scripts
+examples
+vendor
+.openai

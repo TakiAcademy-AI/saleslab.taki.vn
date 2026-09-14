@@ -14,6 +14,9 @@ button:disabled { cursor:not-allowed; opacity:.55; }
 .login-card h1 { margin:0; font-size:clamp(30px,5vw,44px); line-height:1.08; letter-spacing:-.035em; }
 .login-copy { margin:18px 0 26px; color:var(--muted); font-size:16px; line-height:1.65; }
 .login-note { margin:16px 0 0; color:#8190a5; font-size:13px; }
+.login-error { margin:0 0 18px; padding:12px 14px; border-radius:12px; border:1px solid #f3c9c9; background:#fdf2f2; color:#a12c2c; font-size:14px; line-height:1.5; text-align:left; }
+.signout-link { margin-left:14px; padding:8px 14px; border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--muted); font-size:13px; font-weight:700; text-decoration:none; white-space:nowrap; }
+.signout-link:hover { color:var(--ink); border-color:#c9daf2; }
 .primary-button,.secondary-button { width:100%; min-height:48px; border-radius:13px; font-weight:800; border:0; }
 .primary-button { color:#fff; background:linear-gradient(135deg,var(--blue),#0c4dbb); box-shadow:0 10px 24px rgba(18,98,223,.22); }
 .primary-button:hover { filter:brightness(.96); }

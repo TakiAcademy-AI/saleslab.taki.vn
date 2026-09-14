@@ -140,6 +140,7 @@ export default function TrainingPortal({ identity, isAdmin }: { identity: Identi
   const [adminSessions, setAdminSessions] = useState<SavedSession[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const chatEnd = useRef<HTMLDivElement>(null);
 
   const product = useMemo(() => products.find((item) => item.id === productId) ?? products[0], [productId]);
@@ -148,7 +149,21 @@ export default function TrainingPortal({ identity, isAdmin }: { identity: Identi
   const score = saleMessages.length ? Math.round(saleMessages.reduce((sum, item) => sum + (item.feedback?.score ?? 0), 0) / saleMessages.length) : 0;
 
   useEffect(() => {
-    fetch("/api/me").then((res) => res.json()).then((data) => setProfile(data.profile ?? null)).catch(() => setProfile(null));
+    (async () => {
+      try {
+        const response = await fetch("/api/me");
+        if (response.status === 401) { window.location.href = "/api/auth/signout"; return; }
+        if (!response.ok) {
+          // A failed load is a server problem, not "this user has not registered".
+          setLoadError(`Máy chủ trả lỗi ${response.status} khi tải tài khoản. Vui lòng tải lại trang hoặc báo quản trị viên.`);
+          return;
+        }
+        const data = await response.json();
+        setProfile(data.profile ?? null);
+      } catch {
+        setLoadError("Không kết nối được tới máy chủ. Kiểm tra mạng rồi tải lại trang.");
+      }
+    })();
   }, []);
 
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
@@ -195,6 +210,8 @@ export default function TrainingPortal({ identity, isAdmin }: { identity: Identi
     else setSessions(data.sessions ?? []);
   }
 
+  if (loadError) return <main className="login-shell"><section className="login-card"><div className="brand-mark">T</div><p className="eyebrow">KHÔNG TẢI ĐƯỢC</p><p className="login-error">{loadError}</p><a className="primary-button login-button" href="/">Tải lại</a></section></main>;
+
   if (profile === undefined) return <main className="center-screen"><div className="loader" /><p>Đang tải tài khoản…</p></main>;
 
   if (!profile) return <Registration identity={identity} onComplete={setProfile} />;
@@ -208,7 +225,7 @@ export default function TrainingPortal({ identity, isAdmin }: { identity: Identi
           <button className={tab === "history" ? "active" : ""} onClick={() => loadHistory("history")}>Lịch sử của tôi</button>
           {isAdmin && <button className={tab === "admin" ? "active" : ""} onClick={() => loadHistory("admin")}>Quản trị</button>}
         </nav>
-        <div className="profile-chip"><span>{profile.displayName.slice(0, 1).toUpperCase()}</span><div><strong>{profile.displayName}</strong><small>{profile.team}{isAdmin ? " · Admin" : ""}</small></div></div>
+        <div className="profile-chip"><span>{profile.displayName.slice(0, 1).toUpperCase()}</span><div><strong>{profile.displayName}</strong><small>{profile.team}{isAdmin ? " · Admin" : ""}</small></div><a className="signout-link" href="/api/auth/signout">Đăng xuất</a></div>
       </header>
 
       {tab === "train" && (
@@ -246,17 +263,28 @@ function Registration({ identity, onComplete }: { identity: Identity; onComplete
   const [displayName, setDisplayName] = useState(identity.name ?? "");
   const [team, setTeam] = useState("Sales");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function register(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
-    const response = await fetch("/api/me", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ displayName, team }) });
-    const data = await response.json();
-    setBusy(false);
-    if (response.ok) onComplete(data.profile);
+    setError(null);
+    try {
+      const response = await fetch("/api/me", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ displayName, team }) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.profile) {
+        setError(data?.error ?? `Không tạo được tài khoản (lỗi ${response.status}). Vui lòng thử lại hoặc báo quản trị viên.`);
+        return;
+      }
+      onComplete(data.profile);
+    } catch {
+      setError("Không kết nối được tới máy chủ. Kiểm tra mạng rồi thử lại.");
+    } finally {
+      setBusy(false);
+    }
   }
 
-  return <main className="login-shell"><form className="login-card registration" onSubmit={register}><div className="brand-mark">T</div><p className="eyebrow">HOÀN TẤT ĐĂNG KÝ</p><h1>Chào mừng đến TAKI Sales Lab</h1><p className="login-copy">Nhập thông tin ngắn gọn để điểm và lịch sử được ghi đúng theo từng thành viên.</p><label>Họ và tên<input value={displayName} onChange={(e) => setDisplayName(e.target.value)} minLength={2} maxLength={80} required /></label><label>Đội / phòng ban<input value={team} onChange={(e) => setTeam(e.target.value)} minLength={2} maxLength={80} required /></label><button className="primary-button" disabled={busy}>{busy ? "Đang tạo tài khoản…" : "Bắt đầu luyện"}</button></form></main>;
+  return <main className="login-shell"><form className="login-card registration" onSubmit={register}><div className="brand-mark">T</div><p className="eyebrow">HOÀN TẤT ĐĂNG KÝ</p><h1>Chào mừng đến TAKI Sales Lab</h1><p className="login-copy">Nhập thông tin ngắn gọn để điểm và lịch sử được ghi đúng theo từng thành viên.</p>{error && <p className="login-error">{error}</p>}<label>Họ và tên<input value={displayName} onChange={(e) => setDisplayName(e.target.value)} minLength={2} maxLength={80} required /></label><label>Đội / phòng ban<input value={team} onChange={(e) => setTeam(e.target.value)} minLength={2} maxLength={80} required /></label><button className="primary-button" disabled={busy}>{busy ? "Đang tạo tài khoản…" : "Bắt đầu luyện"}</button></form></main>;
 }
 
 function ChatMessage({ message }: { message: Message }) {

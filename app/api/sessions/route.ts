@@ -2,7 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "../../../db";
 import { trainingSessions, users } from "../../../db/schema";
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { getSessionUser } from "../../../lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,14 +11,14 @@ function decode(row: typeof trainingSessions.$inferSelect) {
 }
 
 export async function GET() {
-  const identity = await getChatGPTUser();
+  const identity = await getSessionUser();
   if (!identity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const rows = await getDb().select().from(trainingSessions).where(eq(trainingSessions.userId, identity.userId)).orderBy(desc(trainingSessions.createdAt)).limit(50);
   return NextResponse.json({ sessions: rows.map(decode) });
 }
 
 export async function POST(request: Request) {
-  const identity = await getChatGPTUser();
+  const identity = await getSessionUser();
   if (!identity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const [profile] = await getDb().select({ id: users.id }).from(users).where(eq(users.id, identity.userId)).limit(1);
   if (!profile) return NextResponse.json({ error: "Cần hoàn tất đăng ký" }, { status: 400 });

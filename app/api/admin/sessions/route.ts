@@ -1,16 +1,14 @@
-import { env } from "cloudflare:workers";
 import { desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "../../../../db";
 import { trainingSessions, users } from "../../../../db/schema";
-import { getChatGPTUser } from "../../../chatgpt-auth";
+import { getSessionUser, isAdminEmail } from "../../../../lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const identity = await getChatGPTUser();
-  const adminEmail = String((env as unknown as Record<string, unknown>).TAKI_ADMIN_EMAIL ?? "").trim().toLowerCase();
-  if (!identity?.email || identity.email.toLowerCase() !== adminEmail) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const identity = await getSessionUser();
+  if (!isAdminEmail(identity?.email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const rows = await getDb().select({
     id: trainingSessions.id,
     userId: trainingSessions.userId,
