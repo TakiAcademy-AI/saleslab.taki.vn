@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  appOrigin,
   createSessionToken,
   isAllowedEmail,
   OAUTH_STATE_COOKIE,
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 type OAuthState = { nonce: string; returnTo: string; exp: number };
 
 function failure(request: Request, reason: string) {
-  const url = new URL("/", new URL(request.url).origin);
+  const url = new URL("/", appOrigin(request));
   url.searchParams.set("auth_error", reason);
   const response = NextResponse.redirect(url);
   response.cookies.delete(OAUTH_STATE_COOKIE);
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
   if (!isAllowedEmail(profile.email)) return failure(request, "not_allowed");
 
   const response = NextResponse.redirect(
-    new URL(safeReturnPath(state.returnTo), new URL(request.url).origin),
+    new URL(safeReturnPath(state.returnTo), appOrigin(request)),
   );
   response.cookies.set(
     SESSION_COOKIE,

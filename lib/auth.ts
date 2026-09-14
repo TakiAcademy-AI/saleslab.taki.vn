@@ -134,6 +134,24 @@ export function isAllowedEmail(email: string): boolean {
   );
 }
 
+/**
+ * Public origin of the app. Behind a reverse proxy the standalone server sees
+ * its own bind address (0.0.0.0:3000), so `new URL(request.url).origin` would
+ * build redirects the browser cannot follow. Prefer the configured origin.
+ */
+export function appOrigin(request: Request): string {
+  const configured = (process.env.APP_URL ?? "").trim().replace(/\/+$/, "");
+  if (configured) return configured;
+
+  const host =
+    request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  if (host) {
+    const proto = request.headers.get("x-forwarded-proto") ?? "https";
+    return `${proto}://${host}`;
+  }
+  return new URL(request.url).origin;
+}
+
 /** Only allow relative paths so `return_to` can never bounce users off-site. */
 export function safeReturnPath(value: string | null | undefined): string {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
