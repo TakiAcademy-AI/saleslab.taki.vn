@@ -30,7 +30,12 @@ ENV NODE_ENV=production \
 
 # Codex CLI is the optional AI backend (AI_BACKEND=codex). It is invoked with
 # --sandbox read-only and its own CODEX_HOME so it never sees app secrets.
-RUN npm install -g @openai/codex@0.149.0 && npm cache clean --force
+# ca-certificates is required: codex is a Rust binary that verifies TLS against
+# the system trust store, unlike Node, which carries its own CA bundle.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && npm install -g @openai/codex@0.149.0 && npm cache clean --force
 
 RUN groupadd --system --gid 1001 nodejs \
  && useradd --system --uid 1001 --gid nodejs nextjs \
