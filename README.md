@@ -16,18 +16,53 @@ Chạy tại **https://saleslab.taki.vn** (Coolify, VPS 152.53.177.175).
 
 ## Chạy cục bộ
 
-Yêu cầu Node.js `>=22.13.0`.
+Yêu cầu **Node.js `>=22.13.0`**. Trên Linux cần thêm `python3`, `make`, `g++` —
+`better-sqlite3` là native module phải biên dịch lúc cài
+(`sudo apt install -y python3 make g++`). macOS cần Xcode Command Line Tools.
+
+### 1. Cài và cấu hình
 
 ```bash
 npm install
-cp .env.example .env.local   # điền GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SESSION_SECRET
-npm run dev                  # http://localhost:3000
+cp .env.example .env.local
+openssl rand -hex 32          # dán vào SESSION_SECRET
 ```
 
-Tạo `SESSION_SECRET` bằng `openssl rand -hex 32`. Trong Google Cloud Console, thêm
-`http://localhost:3000/api/auth/callback` vào Authorized redirect URIs.
+### 2. Tạo Google OAuth client
 
-Không cần chạy migration thủ công — `getDb()` áp dụng thư mục `drizzle/` ở lần truy cập đầu tiên.
+App không có mật khẩu riêng, đăng nhập hoàn toàn qua Google. Vào
+[console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials)
+→ *Create credentials* → *OAuth client ID* → *Web application*, thêm vào
+**Authorized redirect URIs** (đúng từng ký tự, không thừa dấu `/` cuối):
+
+```
+http://localhost:3000/api/auth/callback
+```
+
+Điền `GOOGLE_CLIENT_ID` và `GOOGLE_CLIENT_SECRET` vào `.env.local`. Đặt
+`APP_URL=http://localhost:3000` và `ALLOWED_EMAIL_DOMAINS=*` nếu muốn đăng nhập
+bằng email bất kỳ khi phát triển. Muốn thấy tab Quản trị thì đặt
+`TAKI_ADMIN_EMAIL` bằng chính email mình dùng để đăng nhập.
+
+Nếu consent screen để ở chế độ *Testing*, chỉ email nằm trong **Test users** mới
+đăng nhập được — thêm email của mình vào đó, hoặc bấm **Publish app**.
+
+### 3. Chạy
+
+```bash
+npm run dev        # http://localhost:3000
+npm test           # 147 check hội thoại trên 13 ngành
+npm run typecheck
+```
+
+Không cần chạy migration thủ công: `getDb()` tự áp dụng thư mục `drizzle/` ở lần
+truy cập đầu tiên, tạo sẵn `./data/saleslab.sqlite`.
+
+### Chạy không cần AI
+
+Để trống `AI_BACKEND`, `OPENAI_API_KEY` và `OPENAI_MODEL` thì app vẫn chạy đầy đủ
+bằng engine tất định trong `lib/training-engine.ts` — vẫn sinh câu khách bám ngành
+và chấm điểm 5 trục. Đây là cấu hình nhẹ nhất để bắt đầu; nối AI là bước tuỳ chọn.
 
 ## Biến môi trường
 
@@ -40,6 +75,9 @@ Không cần chạy migration thủ công — `getDb()` áp dụng thư mục `d
 | `ALLOWED_EMAIL_DOMAINS` | — | Mặc định `taki.vn`. Nhận domain hoặc email cụ thể, phân tách bằng dấu phẩy. `*` để mở hết |
 | `TAKI_ADMIN_EMAIL` | — | Email thấy tab Quản trị, cho phép nhiều email phân tách bằng dấu phẩy |
 | `DATABASE_PATH` | — | Mặc định `/data/saleslab.sqlite` trong image Docker |
+| `AI_BACKEND` | — | `codex` để dùng Codex CLI. Để trống thì dùng `OPENAI_API_KEY` |
+| `OPENAI_API_KEY` / `OPENAI_MODEL` | — | Phải có cả hai; thiếu một sẽ rơi về engine tất định |
+| `CODEX_HOME` / `CODEX_TIMEOUT_MS` | — | Chỉ dùng khi `AI_BACKEND=codex` |
 
 Không commit `.env`, `.dev.vars` hay secret vào repository.
 
