@@ -25,11 +25,16 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
     DATABASE_PATH=/data/saleslab.sqlite \
-    MIGRATIONS_PATH=/app/drizzle
+    MIGRATIONS_PATH=/app/drizzle \
+    CODEX_HOME=/codex
+
+# Codex CLI is the optional AI backend (AI_BACKEND=codex). It is invoked with
+# --sandbox read-only and its own CODEX_HOME so it never sees app secrets.
+RUN npm install -g @openai/codex@0.149.0 && npm cache clean --force
 
 RUN groupadd --system --gid 1001 nodejs \
  && useradd --system --uid 1001 --gid nodejs nextjs \
- && mkdir -p /data && chown -R nextjs:nodejs /data
+ && mkdir -p /data /codex && chown -R nextjs:nodejs /data /codex
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
@@ -39,5 +44,5 @@ COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
 
 USER nextjs
 EXPOSE 3000
-VOLUME ["/data"]
+VOLUME ["/data", "/codex"]
 CMD ["node", "server.js"]
